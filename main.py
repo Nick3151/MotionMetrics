@@ -1,54 +1,86 @@
 import numpy as np
 import sys
+import pandas as pd
 from pathlib import Path
+import matplotlib.pyplot as plt
+import time
+
 from suite2p import run_s2p, default_ops, io
 from metrics import mean_max_intensity, mean_correlation
-import matplotlib.pyplot as plt
+from settings import generate_ops
 
 
 if __name__ == '__main__':
+    folder_name = '011022_GC33_GCaMP'
+    file_name = 'rightCam_011022_GC33_GCaMP'
+    side = 'right'
+    save_folder_name_default = side + '_register_default'
+    save_folder_name_1p = side + '_register_1p'
     fs = 20
     p = Path.cwd()
     p = p.parent
-    p = p / 'Widefield' / '011222_GC32_GCaMP'
-    # only run on specified tiffs
+    p = p / 'Widefield' / folder_name
+
     db = {
-        'look_one_level_down': False,  # whether to look in ALL subfolders when searching for tiffs
-        'data_path': [str(p)],
-        # a list of folders with tiffs
-        # (or folder of folders with tiffs if look_one_level_down is True, or subfolders is not empty)
-        'subfolders': [],  # choose subfolders of 'data_path' to look in (optional)
-        'tiff_list': ['leftCam_011222_GC32_GCaMP.tif']  # list of tiffs in folder * data_path *!
+        'data_path': str(p),
+        'save_path0': str(p),
+        'tiff_list': [str(p / (file_name + '.tif'))],
+        'save_folder': save_folder_name_default,
+        'fast_disk': str(p / save_folder_name_default)
     }
-    ops = default_ops()
-    ops['roidetect'] = False
-    ops['fs'] = fs
-    ops['keep_movie_raw'] = True
-    ops['save_folder'] = 'register_default'
 
-    ops_1p = ops.copy()
-    ops_1p['1Preg'] = True
-    ops_1p['save_folder'] = 'register_1p'
+    Path.mkdir(p / save_folder_name_default, exist_ok=True)
+    Path.mkdir(p / save_folder_name_1p, exist_ok=True)
 
-    output_ops = run_s2p(ops=ops, db=db)
+    if not Path.exists(p / save_folder_name_default / 'ops_default.npy'):
+        ops_default = generate_ops()
+        np.save(str(p / save_folder_name_default / 'ops_default.npy'), ops_default)
+    else:
+        ops_default = np.load(str(p / save_folder_name_default / 'ops_default.npy'), allow_pickle=True)
+        ops_default = ops_default.item()
+
+    if not Path.exists(p / save_folder_name_1p / 'ops_1p.npy'):
+        ops_1p = generate_ops(one_photon=True)
+        np.save(str(p / save_folder_name_1p / 'ops_1p.npy'), ops_1p)
+    else:
+        ops_1p = np.load(str(p / save_folder_name_1p / 'ops_1p.npy'), allow_pickle=True)
+        ops_1p = ops_1p.item()
+
+    output_ops = run_s2p(ops=ops_default, db=db)
 
     f = io.binary.BinaryFile(Lx=output_ops['Lx'], Ly=output_ops['Ly'], read_filename=output_ops['reg_file'])
     data_reg = f.data
     f = io.binary.BinaryFile(Lx=output_ops['Lx'], Ly=output_ops['Ly'], read_filename=output_ops['raw_file'])
     data_raw = f.data
 
+    db = {
+        'data_path': str(p),
+        'save_path0': str(p),
+        'tiff_list': [str(p / (file_name + '.tif'))],
+        'save_folder': save_folder_name_1p,
+        'fast_disk': str(p / save_folder_name_1p)
+    }
+
     output_ops_1p = run_s2p(ops=ops_1p, db=db)
     f = io.binary.BinaryFile(Lx=output_ops_1p['Lx'], Ly=output_ops_1p['Ly'], read_filename=output_ops_1p['reg_file'])
     data_reg_1p = f.data
 
-    mmp_pre = mean_max_intensity(data_raw)
-    mmp_post = mean_max_intensity(data_reg)
-    mmp_post_1p = mean_max_intensity(data_reg_1p)
-    mcm_pre = mean_correlation(data_raw)
-    mcm_post = mean_correlation(data_reg)
-    mcm_post_1p = mean_correlation(data_reg_1p)
+    win = 100
+    overlap = 50
+    t0 = time.time()
+    print("Evaluate mean max projection...")
+    mmp_pre = mean_max_intensity(data_raw, win, overlap)
+    mmp_post = mean_max_intensity(data_reg, win, overlap)
+    mmp_post_1p = mean_max_intensity(data_reg_1p, win, overlap)
+    print("Run time %0.2f sec" % (time.time()-t0))
+    t1 = time.time()
+    print("Evaluate mean correlation...")
+    mcm_pre = mean_correlation(data_raw, win, overlap)
+    mcm_post = mean_correlation(data_reg, win, overlap)
+    mcm_post_1p = mean_correlation(data_reg_1p, win, overlap)
+    print("Run time %0.2f sec" % (time.time()-t1))
 
-    t = np.arange(len(mmp_pre))/fs
+    t = np.arange(len(mmp_pre))/fs*(win-overlap)
     plt.figure()
     plt.subplot(2, 1, 1)
     plt.plot(t, mmp_pre)
@@ -63,3 +95,9 @@ if __name__ == '__main__':
     plt.plot(t, mcm_post_1p)
     plt.title('Mean Correlation')
     plt.legend(['raw', 'registered default', 'registered 1p'])
+
+    metrics = np.array([[mmp_pre.mean(), mmp_post.mean(), mmp_post_1p.mean(), mcm_pre.mean(), mcm_post.mean(), mcm_post_1p.mean()]])
+    df = pd.DataFrame(data=metrics, index=[file_name],
+                      columns=['Mean Max Projection Raw', 'Mean Max Projection Registered', 'Mean Max Projection Registered 1p',
+                               'Mean Correlation Raw', 'Mean Correlation Registered', 'Mean Correlation Registered 1p'])
+    df.to_csv('metrics.csv', mode='a', header=False)
