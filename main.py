@@ -2,6 +2,8 @@ import numpy as np
 import sys
 import pandas as pd
 from pathlib import Path
+import matplotlib
+matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import time
 
@@ -23,10 +25,8 @@ if __name__ == '__main__':
 
     db = {
         'data_path': str(p),
-        'save_path0': str(p),
-        'tiff_list': [str(p / (file_name + '.tif'))],
-        'save_folder': save_folder_name_default,
-        'fast_disk': str(p / save_folder_name_default)
+        'save_path0': str(p / save_folder_name_default),
+        'tiff_list': [str(p / (file_name + '.tif'))]
     }
 
     Path.mkdir(p / save_folder_name_default, exist_ok=True)
@@ -55,10 +55,8 @@ if __name__ == '__main__':
 
     db = {
         'data_path': str(p),
-        'save_path0': str(p),
-        'tiff_list': [str(p / (file_name + '.tif'))],
-        'save_folder': save_folder_name_1p,
-        'fast_disk': str(p / save_folder_name_1p)
+        'save_path0': str(p / save_folder_name_1p),
+        'tiff_list': [str(p / (file_name + '.tif'))]
     }
 
     output_ops_1p = run_s2p(ops=ops_1p, db=db)
@@ -97,7 +95,7 @@ if __name__ == '__main__':
     plt.legend(['raw', 'registered default', 'registered 1p'])
 
     metrics = np.array([[mmp_pre.mean(), mmp_post.mean(), mmp_post_1p.mean(), mcm_pre.mean(), mcm_post.mean(), mcm_post_1p.mean()]])
-    df = pd.DataFrame(data=metrics, index=[file_name],
-                      columns=['Mean Max Projection Raw', 'Mean Max Projection Registered', 'Mean Max Projection Registered 1p',
-                               'Mean Correlation Raw', 'Mean Correlation Registered', 'Mean Correlation Registered 1p'])
-    df.to_csv('metrics.csv', mode='a', header=False)
+    # df = pd.DataFrame(data=metrics, index=[file_name],
+    #                   columns=['Mean Max Projection Raw', 'Mean Max Projection Registered', 'Mean Max Projection Registered 1p',
+    #                            'Mean Correlation Raw', 'Mean Correlation Registered', 'Mean Correlation Registered 1p'])
+    # df.to_csv('metrics.csv', mode='a', header=False)
