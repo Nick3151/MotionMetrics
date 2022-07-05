@@ -42,7 +42,8 @@ ops.downsample_frame_num = 50;
 %% Specify the number of workers for parallel processing
 % worker_num:   Specify the number of workers that processing registrations in parallel. Assign all available CPU cores for the maximum processing
 %               speed (e.g. parcluster('local').NumWorkers). If you get 'Out of Memory' error due to limited RAM, assign smaller number of workers.
-ops.worker_num = parcluster('local').NumWorkers; 
+ops.worker_num = 4; 
+% ops.worker_num = parcluster('local').NumWorkers; 
 
 %% Set parameter for rigid motion correction
 % rigid_norm_method:            'rank' or 'local'. When PMT noise is high,'rank' method probably works better. Try 'local' when 'rank' does not work well.
