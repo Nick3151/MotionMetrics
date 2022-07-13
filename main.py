@@ -13,9 +13,9 @@ from settings import generate_ops
 
 
 if __name__ == '__main__':
-    folder_name = '011022_GC33_GCaMP'
-    file_name = 'rightCam_011022_GC33_GCaMP'
+    folder_name = '120121_LC11_NC_GCaMP'
     side = 'right'
+    file_name = side + 'Cam_' + folder_name
     save_folder_name_default = side + '_register_default'
     save_folder_name_1p = side + '_register_1p'
     fs = 20
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     print("Run time %0.2f sec" % (time.time()-t1))
 
     t = np.arange(len(mmp_pre))/fs*(win-overlap)
-    plt.figure()
+    plt.figure(figsize=[12, 8])
     plt.subplot(2, 1, 1)
     plt.plot(t, mmp_pre)
     plt.plot(t, mmp_post)
@@ -93,6 +93,7 @@ if __name__ == '__main__':
     plt.plot(t, mcm_post_1p)
     plt.title('Mean Correlation')
     plt.legend(['raw', 'registered default', 'registered 1p'])
+    plt.show()
 
     metrics = np.array([[mmp_pre.mean(), mmp_post.mean(), mmp_post_1p.mean(), mcm_pre.mean(), mcm_post.mean(), mcm_post_1p.mean()]])
     # df = pd.DataFrame(data=metrics, index=[file_name],
